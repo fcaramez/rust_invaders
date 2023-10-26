@@ -10,7 +10,13 @@ use rust_invaders::{
     render,
 };
 use rusty_audio::Audio;
-use std::{error::Error, io, sync::mpsc, thread, time::Duration};
+use std::{
+    error::Error,
+    io,
+    sync::mpsc,
+    thread,
+    time::{Duration, Instant},
+};
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Load all initial audio Files into the program
@@ -50,11 +56,13 @@ fn main() -> Result<(), Box<dyn Error>> {
     });
 
     let mut player = Player::new();
+    let mut instant = Instant::now();
 
     // Game Loop
     'gapeloop: loop {
         // Per-frame init
-
+        let delta = instant.elapsed();
+        instant = Instant::now();
         let mut curr_frame = new_frame();
         // Input
         while event::poll(Duration::default())? {
@@ -62,6 +70,11 @@ fn main() -> Result<(), Box<dyn Error>> {
                 match key_event.code {
                     KeyCode::Left => player.move_self(),
                     KeyCode::Right => player.move_right(),
+                    KeyCode::Char(' ') | KeyCode::Enter => {
+                        if player.shoot() {
+                            audio.play("pew")
+                        }
+                    }
                     KeyCode::Esc | KeyCode::Char('q') => {
                         audio.play("lose");
                         break 'gapeloop;
@@ -70,6 +83,9 @@ fn main() -> Result<(), Box<dyn Error>> {
                 }
             }
         }
+
+        // Updates
+        player.update(delta);
 
         // Draw and render
         player.draw(&mut curr_frame);
